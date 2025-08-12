@@ -1,0 +1,751 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KUST - Manual Record Verification Portal</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        
+        * {
+            font-family: 'Inter', sans-serif;
+        }
+        
+        .kust-gradient {
+            background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+        }
+        
+        .glass-effect {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+        
+        .document-card {
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+        }
+        
+        .document-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            border-color: #3b82f6;
+        }
+        
+        .status-badge {
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.7;
+            }
+        }
+        
+        .search-input:focus {
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+        
+        .tab-active {
+            border-bottom: 3px solid #3b82f6;
+            color: #3b82f6;
+        }
+        
+        .loader {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #3b82f6;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .document-thumbnail {
+            cursor: pointer;
+            transition: transform 0.3s ease;
+        }
+
+        .document-thumbnail:hover {
+            transform: scale(1.05);
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.9);
+        }
+
+        .modal-content {
+            margin: auto;
+            display: block;
+            max-width: 90%;
+            max-height: 90%;
+        }
+
+        .close-modal {
+            position: absolute;
+            top: 20px;
+            right: 35px;
+            color: #f1f1f1;
+            font-size: 40px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        @media (max-width: 640px) {
+            .mobile-menu {
+                display: none;
+            }
+            
+            .mobile-menu.active {
+                display: block;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- Header -->
+    <header class="kust-gradient shadow-lg">
+        <div class="container mx-auto px-4">
+            <div class="flex items-center justify-between py-4">
+                <div class="flex items-center space-x-4">
+                    <div class="bg-white rounded-full p-2">
+                        <img src="logo.png" alt="KUST official logo with university emblem in blue and gold colors" class="w-14 h-14" />
+                    </div>
+                    <div class="text-white">
+                        <h1 class="text-xl md:text-2xl font-bold">KOHAT UNIVERSITY OF SCIENCE & TECHNOLOGY</h1>
+                        <p class="text-xs md:text-sm opacity-90">Manual Record Verification Portal</p>
+                    </div>
+                </div>
+                <div class="hidden md:flex items-center space-x-4 text-white">
+                    <i class="fas fa-user-circle text-2xl"></i>
+                    <span class="text-sm">Admin Portal</span>
+                </div>
+                <button class="md:hidden text-white text-2xl" onclick="toggleMobileMenu()">
+                    <i class="fas fa-bars"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Navigation Tabs -->
+    <nav class="bg-white shadow-sm sticky top-0 z-40">
+        <div class="container mx-auto px-4">
+            <div class="flex space-x-8 overflow-x-auto">
+                <button class="py-4 px-2 text-sm font-medium tab-active whitespace-nowrap" onclick="showTab('search')">
+                    <i class="fas fa-search mr-2"></i>Search Records
+                </button>
+                
+               
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="container mx-auto px-4 py-8">
+        <!-- Search Tab -->
+        <div id="searchTab" class="tab-content">
+            <div class="max-w-4xl mx-auto">
+                <div class="glass-effect rounded-lg p-6 md:p-8 shadow-xl">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-6">
+                        <i class="fas fa-id-card text-blue-600 mr-3"></i>
+                        Search Student Record by CNIC
+                    </h2>
+                    
+                    <div class="space-y-4">
+                        <div class="relative">
+                            <input 
+                                type="text" 
+                                id="cnicSearch" 
+                                placeholder="Enter CNIC Number "
+                                class="w-full px-4 py-3 border-2 border-gray-200 rounded-lg search-input focus:border-blue-500 focus:outline-none text-lg"
+                                onkeyup="formatCNIC(this)"
+                                maxlength="17"
+                            />
+                            <button 
+                                onclick="searchRecord()" 
+                                class="absolute right-2 top-1/2 transform -translate-y-1/2 bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 transition-colors"
+                            >
+                                <i class="fas fa-search mr-2"></i>Search
+                            </button>
+                        </div>
+                        
+                        <div class="flex items-center space-x-2 text-sm text-gray-600">
+                            <i class="fas fa-info-circle text-blue-500"></i>
+                            <span>Format: XXXXX-XXXXXXX-X</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Search Results -->
+                <div id="searchResults" class="mt-8 hidden">
+                    <div class="glass-effect rounded-lg p-6 shadow-xl">
+                        <div class="flex items-center justify-between mb-6">
+                            <h3 class="text-xl font-bold text-gray-800">
+                                <i class="fas fa-user-check text-green-600 mr-2"></i>
+                                Record Found
+                            </h3>
+                            <span class="status-badge bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium">
+                                Verified
+                            </span>
+                        </div>
+
+                        <div class="grid md:grid-cols-2 gap-6">
+                            <!-- Student Information -->
+                            <div class="space-y-4">
+                                <h4 class="font-semibold text-gray-700 border-b pb-2">Personal Information</h4>
+                                <div class="space-y-3">
+                                    <div class="flex justify-between">
+                                        <span class="text-gray-600">Name:</span>
+                                        <span class="font-medium">Tahir Iqbal</span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span class="text-gray-600">Father Name:</span>
+                                        <span class="font-medium">Muhammad Ilyas</span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span class="text-gray-600">CNIC:</span>
+                                        <span class="font-medium">17601-0579283-9</span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span class="text-gray-600">Date of Birth:</span>
+                                        <span class="font-medium">01/11/1989</span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span class="text-gray-600">Registration No:</span>
+                                        <span class="font-medium">KUST-2021-MBA-087</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Academic Information -->
+                            <div class="space-y-4">
+                                <h4 class="font-semibold text-gray-700 border-b pb-2">Academic Information</h4>
+                                <div class="space-y-3">
+                                    <div class="flex justify-between">
+                                        <span class="text-gray-600">Program:</span>
+                                        <span class="font-medium">BS Physical Sciences</span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span class="text-gray-600">Session:</span>
+                                        <span class="font-medium">2016-2018</span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span class="text-gray-600">Status:</span>
+                                        <span class="font-medium text-green-600">Graduated</span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span class="text-gray-600">CGPA:</span>
+                                        <span class="font-medium">3.8/4.0</span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span class="text-gray-600">Verification Date:</span>
+                                        <span class="font-medium">Jul 1, 2018</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Document Images -->
+                        <div class="mt-8">
+                            <h4 class="font-semibold text-gray-700 border-b pb-2 mb-4">Attached Documents</h4>
+                            <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+                                <div class="document-card bg-white rounded-lg p-4 shadow-md">
+                                    <img 
+                                        src="image.png" 
+                                        alt="Passport size photo of male student wearing teal polo shirt with dark collar on light blue background"
+                                        class="w-full h-40 object-cover rounded-md mb-2 document-thumbnail"
+                                        onclick="openModal(this.src, this.alt)"
+                                    />
+                                    <p class="text-sm text-gray-600 text-center font-medium">Student Photo</p>
+                                </div>
+                                <div class="document-card bg-white rounded-lg p-4 shadow-md">
+                                    <img 
+                                        src="vis.png" 
+                                        alt="KUST official visitor register document with blue header showing approved stamp and multiple visitor entries in table format dated March 2018"
+                                        class="w-full h-40 object-cover rounded-md mb-2 document-thumbnail"
+                                        onclick="openModal(this.src, this.alt)"
+                                    />
+                                    <p class="text-sm text-gray-600 text-center font-medium">Visitor Register</p>
+                                </div>
+                                <div class="document-card bg-white rounded-lg p-4 shadow-md">
+                                    <img 
+                                        src="cnic.png" 
+                                        alt="Pakistani National Identity Card showing CNIC number 71601-0579283-9 with government of Pakistan emblem and holder photo"
+                                        class="w-full h-40 object-cover rounded-md mb-2 document-thumbnail"
+                                        onclick="openModal(this.src, this.alt)"
+                                    />
+                                    <p class="text-sm text-gray-600 text-center font-medium">CNIC Document</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Action Buttons -->
+                        <div class="mt-8 flex flex-wrap gap-4 justify-center">
+                            <button class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors">
+                                <i class="fas fa-print mr-2"></i>Print Record
+                            </button>
+                            <button class="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 transition-colors">
+                                <i class="fas fa-download mr-2"></i>Download PDF
+                            </button>
+                            <button class="bg-purple-600 text-white px-6 py-2 rounded-lg hover:bg-purple-700 transition-colors">
+                                <i class="fas fa-share mr-2"></i>Share Record
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- No Results Message -->
+                <div id="noResults" class="mt-8 hidden">
+                    <div class="glass-effect rounded-lg p-8 text-center shadow-xl">
+                        <i class="fas fa-search text-gray-400 text-6xl mb-4"></i>
+                        <h3 class="text-xl font-semibold text-gray-700 mb-2">No Record Found</h3>
+                        <p class="text-gray-600">Please check the CNIC number and try again.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Add Record Tab -->
+        <div id="addTab" class="tab-content hidden">
+            <div class="max-w-4xl mx-auto">
+                <div class="glass-effect rounded-lg p-6 md:p-8 shadow-xl">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-6">
+                        <i class="fas fa-user-plus text-blue-600 mr-3"></i>
+                        Add New Student Record
+                    </h2>
+
+                    <form class="space-y-6" onsubmit="addRecord(event)">
+                        <!-- Personal Information Section -->
+                        <div class="border-b pb-6">
+                            <h3 class="text-lg font-semibold text-gray-700 mb-4">Personal Information</h3>
+                            <div class="grid md:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Full Name *</label>
+                                    <input type="text" required class="w-full px-4 py-2 border rounded-lg focus:border-blue-500 focus:outline-none" />
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Father's Name *</label>
+                                    <input type="text" required class="w-full px-4 py-2 border rounded-lg focus:border-blue-500 focus:outline-none" />
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">CNIC Number *</label>
+                                    <input type="text" required maxlength="17" onkeyup="formatCNIC(this)" class="w-full px-4 py-2 border rounded-lg focus:border-blue-500 focus:outline-none" />
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Date of Birth *</label>
+                                    <input type="date" required class="w-full px-4 py-2 border rounded-lg focus:border-blue-500 focus:outline-none" />
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Email</label>
+                                    <input type="email" class="w-full px-4 py-2 border rounded-lg focus:border-blue-500 focus:outline-none" />
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Phone Number</label>
+                                    <input type="tel" class="w-full px-4 py-2 border rounded-lg focus:border-blue-500 focus:outline-none" />
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Academic Information Section -->
+                        <div class="border-b pb-6">
+                            <h3 class="text-lg font-semibold text-gray-700 mb-4">Academic Information</h3>
+                            <div class="grid md:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Registration Number *</label>
+                                    <input type="text" required class="w-full px-4 py-2 border rounded-lg focus:border-blue-500 focus:outline-none" />
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Program *</label>
+                                    <select required class="w-full px-4 py-2 border rounded-lg focus:border-blue-500 focus:outline-none">
+                                        <option value="">Select Program</option>
+                                        <option>BS Computer Science</option>
+                                        <option>BS Software Engineering</option>
+                                        <option>BS Information Technology</option>
+                                        <option>BS Electrical Engineering</option>
+                                        <option>BS Civil Engineering</option>
+                                        <option>BBA</option>
+                                        <option>MBA</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Session *</label>
+                                    <input type="text" placeholder="e.g., 2018-2022" required class="w-full px-4 py-2 border rounded-lg focus:border-blue-500 focus:outline-none" />
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Status *</label>
+                                    <select required class="w-full px-4 py-2 border rounded-lg focus:border-blue-500 focus:outline-none">
+                                        <option value="">Select Status</option>
+                                        <option>Active</option>
+                                        <option>Graduated</option>
+                                        <option>Suspended</option>
+                                        <option>Transferred</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">CGPA</label>
+                                    <input type="text" placeholder="e.g., 3.45" class="w-full px-4 py-2 border rounded-lg focus:border-blue-500 focus:outline-none" />
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Department</label>
+                                    <input type="text" class="w-full px-4 py-2 border rounded-lg focus:border-blue-500 focus:outline-none" />
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Document Upload Section -->
+                        <div class="pb-6">
+                            <h3 class="text-lg font-semibold text-gray-700 mb-4">Upload Documents</h3>
+                            <div class="grid md:grid-cols-3 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Student Photo *</label>
+                                    <div class="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-blue-500 transition-colors cursor-pointer">
+                                        <i class="fas fa-camera text-gray-400 text-3xl mb-2"></i>
+                                        <p class="text-sm text-gray-600">Click to upload</p>
+                                        <input type="file" accept="image/*" class="hidden" />
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">CNIC Copy *</label>
+                                    <div class="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-blue-500 transition-colors cursor-pointer">
+                                        <i class="fas fa-id-card text-gray-400 text-3xl mb-2"></i>
+                                        <p class="text-sm text-gray-600">Click to upload</p>
+                                        <input type="file" accept="image/*" class="hidden" />
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Additional Document</label>
+                                    <div class="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-blue-500 transition-colors cursor-pointer">
+                                        <i class="fas fa-file-alt text-gray-400 text-3xl mb-2"></i>
+                                        <p class="text-sm text-gray-600">Click to upload</p>
+                                        <input type="file" accept="image/*,application/pdf" class="hidden" />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Submit Button -->
+                        <div class="flex justify-center">
+                            <button type="submit" class="bg-blue-600 text-white px-8 py-3 rounded-lg hover:bg-blue-700 transition-colors font-medium">
+                                <i class="fas fa-save mr-2"></i>Save Record
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- All Records Tab -->
+        <div id="allTab" class="tab-content hidden">
+            <div class="glass-effect rounded-lg p-6 shadow-xl">
+                <div class="flex flex-col md:flex-row justify-between items-center mb-6">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-4 md:mb-0">
+                        <i class="fas fa-list text-blue-600 mr-3"></i>
+                        All Student Records
+                    </h2>
+                    <div class="flex items-center space-x-4">
+                        <input 
+                            type="text" 
+                            placeholder="Search by name or CNIC..."
+                            class="px-4 py-2 border rounded-lg focus:border-blue-500 focus:outline-none"
+                        />
+                        <button class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors">
+                            <i class="fas fa-file-excel mr-2"></i>Export
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Records Table -->
+                <div class="overflow-x-auto">
+                    <table class="w-full table-auto">
+                        <thead class="bg-gray-100">
+                            <tr>
+                                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">S.No</th>
+                                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Name</th>
+                                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">CNIC</th>
+                                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Program</th>
+                                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Session</th>
+                                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Status</th>
+                                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-200">
+                            <tr class="hover:bg-gray-50">
+                                <td class="px-4 py-3 text-sm">1</td>
+                                <td class="px-4 py-3 text-sm font-medium">Tahir Iqbal</td>
+                                <td class="px-4 py-3 text-sm">17601-0579283-9</td>
+                                <td class="px-4 py-3 text-sm">BS Computer Science</td>
+                                <td class="px-4 py-3 text-sm">2018-2022</td>
+                                <td class="px-4 py-3">
+                                    <span class="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs font-medium">Graduated</span>
+                                </td>
+                                <td class="px-4 py-3">
+                                    <button class="text-blue-600 hover:text-blue-800 mr-3">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                    <button class="text-green-600 hover:text-green-800 mr-3">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button class="text-red-600 hover:text-red-800">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                            <tr class="hover:bg-gray-50">
+                                <td class="px-4 py-3 text-sm">2</td>
+                                <td class="px-4 py-3 text-sm font-medium">Ahmad Hassan</td>
+                                <td class="px-4 py-3 text-sm">17301-1234567-8</td>
+                                <td class="px-4 py-3 text-sm">BS Software Engineering</td>
+                                <td class="px-4 py-3 text-sm">2019-2023</td>
+                                <td class="px-4 py-3">
+                                    <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-medium">Active</span>
+                                </td>
+                                <td class="px-4 py-3">
+                                    <button class="text-blue-600 hover:text-blue-800 mr-3">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                    <button class="text-green-600 hover:text-green-800 mr-3">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button class="text-red-600 hover:text-red-800">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                            <tr class="hover:bg-gray-50">
+                                <td class="px-4 py-3 text-sm">3</td>
+                                <td class="px-4 py-3 text-sm font-medium">Fatima Khan</td>
+                                <td class="px-4 py-3 text-sm">17401-9876543-2</td>
+                                <td class="px-4 py-3 text-sm">BBA</td>
+                                <td class="px-4 py-3 text-sm">2020-2024</td>
+                                <td class="px-4 py-3">
+                                    <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-medium">Active</span>
+                                </td>
+                                <td class="px-4 py-3">
+                                    <button class="text-blue-600 hover:text-blue-800 mr-3">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                    <button class="text-green-600 hover:text-green-800 mr-3">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button class="text-red-600 hover:text-red-800">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Pagination -->
+                <div class="flex justify-between items-center mt-6">
+                    <p class="text-sm text-gray-600">Showing 1 to 3 of 150 entries</p>
+                    <div class="flex space-x-2">
+                        <button class="px-3 py-1 border rounded hover:bg-gray-100">Previous</button>
+                        <button class="px-3 py-1 bg-blue-600 text-white rounded">1</button>
+                        <button class="px-3 py-1 border rounded hover:bg-gray-100">2</button>
+                        <button class="px-3 py-1 border rounded hover:bg-gray-100">3</button>
+                        <button class="px-3 py-1 border rounded hover:bg-gray-100">Next</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Image Modal -->
+    <div id="imageModal" class="modal" onclick="closeModal()">
+        <span class="close-modal" onclick="closeModal()">&times;</span>
+        <img class="modal-content" id="modalImage">
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-gray-800 text-white py-8 mt-12">
+        <div class="container mx-auto px-4">
+            <div class="grid md:grid-cols-3 gap-8">
+                <div>
+                    <h3 class="font-semibold mb-3">Contact Information</h3>
+                    <p class="text-sm text-gray-400">
+                        Kohat University of Science & Technology<br>
+                        Bannu Road, Kohat 26000<br>
+                        Khyber Pakhtunkhwa, Pakistan<br>
+                        Phone: +92-922-554556
+                    </p>
+                </div>
+                <div>
+                    <h3 class="font-semibold mb-3">Quick Links</h3>
+                    <ul class="text-sm text-gray-400 space-y-2">
+                        <li><a href="#" class="hover:text-white">University Website</a></li>
+                        <li><a href="#" class="hover:text-white">Student Portal</a></li>
+                        <li><a href="#" class="hover:text-white">Academic Calendar</a></li>
+                        <li><a href="#" class="hover:text-white">Support</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h3 class="font-semibold mb-3">System Information</h3>
+                    <p class="text-sm text-gray-400">
+                        Version: 2.0.1<br>
+                        Last Updated: December 2024<br>
+                        Status: <span class="text-green-400">Online</span>
+                    </p>
+                </div>
+            </div>
+            <div class="border-t border-gray-700 mt-8 pt-6 text-center">
+                <p class="text-sm text-gray-400">
+                    Copyright 2024 KUST. All rights reserved. | Developed by IT Department
+                </p>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // Format CNIC input
+        function formatCNIC(input) {
+            let value = input.value.replace(/[^\d]/g, '');
+            let formatted = '';
+            
+            if (value.length > 0) {
+                formatted = value.substring(0, 5);
+            }
+            if (value.length > 5) {
+                formatted += '-' + value.substring(5, 12);
+            }
+            if (value.length > 12) {
+                formatted += '-' + value.substring(12, 13);
+            }
+            
+            input.value = formatted;
+        }
+
+        // Search record by CNIC
+        function searchRecord() {
+            const cnic = document.getElementById('cnicSearch').value;
+            const searchResults = document.getElementById('searchResults');
+            const noResults = document.getElementById('noResults');
+            
+            // Show loader
+            searchResults.classList.add('hidden');
+            noResults.classList.add('hidden');
+            
+            // Simulate search delay
+            setTimeout(() => {
+                if (cnic === '17601-0579283-9' || cnic === '71601-0579283-9') {
+                    searchResults.classList.remove('hidden');
+                    noResults.classList.add('hidden');
+                    // Smooth scroll to results
+                    searchResults.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                } else if (cnic.length > 0) {
+                    searchResults.classList.add('hidden');
+                    noResults.classList.remove('hidden');
+                } else {
+                    alert('Please enter a CNIC number');
+                }
+            }, 500);
+        }
+
+        // Tab switching
+        function showTab(tabName) {
+            // Hide all tabs
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.add('hidden');
+            });
+            
+            // Remove active class from all nav buttons
+            document.querySelectorAll('nav button').forEach(btn => {
+                btn.classList.remove('tab-active');
+                btn.classList.add('text-gray-600');
+            });
+            
+            // Show selected tab
+            document.getElementById(tabName + 'Tab').classList.remove('hidden');
+            
+            // Add active class to clicked button
+            event.target.closest('button').classList.add('tab-active');
+            event.target.closest('button').classList.remove('text-gray-600');
+        }
+
+        // Add new record
+        function addRecord(event) {
+            event.preventDefault();
+            
+            // Show success message
+            const successMessage = document.createElement('div');
+            successMessage.className = 'fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50';
+            successMessage.innerHTML = '<i class="fas fa-check-circle mr-2"></i>Record added successfully!';
+            document.body.appendChild(successMessage);
+            
+            // Remove message after 3 seconds
+            setTimeout(() => {
+                successMessage.remove();
+                // Reset form
+                event.target.reset();
+                // Switch to all records tab
+                showTab('all');
+            }, 3000);
+        }
+
+        // Mobile menu toggle
+        function toggleMobileMenu() {
+            const menu = document.querySelector('.mobile-menu');
+            if (menu) {
+                menu.classList.toggle('active');
+            }
+        }
+
+        // Image modal functions
+        function openModal(src, alt) {
+            const modal = document.getElementById('imageModal');
+            const modalImg = document.getElementById('modalImage');
+            modal.style.display = 'block';
+            modalImg.src = src;
+            modalImg.alt = alt;
+        }
+
+        function closeModal() {
+            document.getElementById('imageModal').style.display = 'none';
+        }
+
+        // Handle Enter key on CNIC search
+        document.getElementById('cnicSearch').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                searchRecord();
+            }
+        });
+
+        // File upload handlers
+        document.querySelectorAll('input[type="file"]').forEach(input => {
+            input.addEventListener('change', function(e) {
+                const parent = this.closest('div');
+                const fileName = e.target.files[0]?.name;
+                if (fileName) {
+                    parent.querySelector('p').textContent = fileName;
+                    parent.style.borderColor = '#3b82f6';
+                }
+            });
+        });
+
+        // Click handlers for file upload areas
+        document.querySelectorAll('.border-dashed').forEach(div => {
+            div.addEventListener('click', function() {
+                this.querySelector('input[type="file"]').click();
+            });
+        });
+    </script>
+</body>
+</html>
+
